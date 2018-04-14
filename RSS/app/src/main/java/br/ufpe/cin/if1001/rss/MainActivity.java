@@ -4,11 +4,17 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
@@ -27,7 +33,7 @@ import java.util.List;
 public class MainActivity extends Activity {
 
     //ao fazer envio da resolucao, use este link no seu codigo!
-    private final String RSS_FEED = "http://leopoldomt.com/if1001/g1brasil.xml";
+    private String RSS_FEED; //= "http://leopoldomt.com/if1001/g1brasil.xml";
 
     //OUTROS LINKS PARA TESTAR...
     //http://rss.cnn.com/rss/edition.rss
@@ -40,7 +46,6 @@ public class MainActivity extends Activity {
     // Declarando ListView e ArrayAdapter
 
     private ListView conteudoRSS;
-    private ArrayAdapter<ItemRSS> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,11 +55,50 @@ public class MainActivity extends Activity {
         //isso vai exigir o processamento do XML baixado da internet usando o ParserRSS
         conteudoRSS = (ListView) findViewById(R.id.conteudoRSS);
 
+
+        // Implementando o armazenamento do link num SharedPreference
+
+        SharedPreferences sharedPreferences = getSharedPreferences("preferencias", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        editor.putString("rssFeed", getString(R.string.rss_feed_default));
+        editor.apply();
+
+        Toast.makeText(getBaseContext(), "Gravador com sucesso." , Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+
+        MenuItem m1 = menu.add(0, 0, 0, "Editar ShPref");
+        m1.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+        return(true);
+    }
+
+    @Override
+    public boolean onMenuItemSelected(int panel, MenuItem item) {
+        switch (item.getItemId()){
+            case 0:
+                Intent intent = new Intent(this, PreferenciasActivity.class);
+                startActivity(intent);
+                break;
+        }
+
+        return(true);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+
+
+        // Obtendo o link que foi armazenado no sharedPreference
+
+        SharedPreferences sharedPreferences = getSharedPreferences("preferencias", Context.MODE_PRIVATE);
+        RSS_FEED = sharedPreferences.getString("rssFeed", "");
+
         new CarregaRSStask().execute(RSS_FEED);
     }
 
@@ -96,16 +140,21 @@ public class MainActivity extends Activity {
 
             conteudoRSS.setAdapter(itemRSSAdapter);
 
-            conteudoRSS.setOnClickListener();
+            conteudoRSS.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                   ListView listView = (ListView) parent;
+                   ItemRSSAdapter arrayAdapter = (ItemRSSAdapter) listView.getAdapter();
 
-            /*adapter = new ArrayAdapter<ItemRSS> (MainActivity.this,
-                android.R.layout.simple_list_item_1,
-                    s
-            );
+                   ItemRSS ir = (ItemRSS) arrayAdapter.getItem(position);
 
-            conteudoRSS.setAdapter(adapter);*/
-
-
+                   String site = ir.getLink();
+                   Intent i = new Intent();
+                   i.setAction(Intent.ACTION_VIEW);
+                   i.setData(Uri.parse(site));
+                   startActivity(i);
+                }
+            });
         }
     }
 
